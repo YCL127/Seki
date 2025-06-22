@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <title>抽座位</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #e0f0ff;
+      margin: 0;
+      padding: 0;
+    }
+    h1 {
+      text-align: center;
+      margin: 20px 0 10px;
+      color: #005792;
+    }
+    .input-section {
+      text-align: center;
+      margin-bottom: 20px;
+      background-color: #ffffff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      max-width: 800px;
+      margin: 20px auto;
+    }
+    .input-section h2 {
+        color: #003f5c;
+        margin-top: 0;
+        margin-bottom: 15px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 10px;
+    }
+    .input-section div {
+        margin-bottom: 15px;
+    }
+    .input-section label {
+        display: inline-block;
+        margin-right: 10px;
+        font-weight: bold;
+        color: #333;
+    }
+    textarea {
+      width: 90%;
+      height: 150px;
+      margin-top: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 8px;
+      font-size: 16px;
+      resize: vertical; /* 允許垂直拖動調整大小 */
+    }
+    input[type="number"], input[type="file"] {
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 16px;
+        margin-right: 10px;
+    }
+    button {
+      background-color: #007ACC;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin-top: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #005f99;
+    }
+
+    /* 主要遊戲區容器佈局調整 */
+    .main-container {
+      display: flex;
+      flex-direction: row; /* 讓圖片/表格區和抽卡區塊並排 */
+      justify-content: center; /* 水平居中整個主容器內容 */
+      align-items: flex-start; /* 頂部對齊圖片/表格與抽卡按鈕區域 */
+      gap: 40px; /* 增加間距 */
+      flex-wrap: wrap; /* 允許換行在小螢幕上 */
+      margin-top: 20px;
+      width: 100%;
+      max-width: 1000px; /* 限制最大寬度，並讓其在父容器中居中 */
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* 共用顯示圖片/表格的容器 */
+    #visualDisplayContainer {
+        /* 作為 flex item，讓其內容自然寬度 */
+        flex-shrink: 0; 
+        flex-grow: 0;
+        display: flex; /* 內部 flexbox 讓圖片/表格居中 */
+        justify-content: center; 
+        align-items: center; 
+        min-width: 300px; /* 確保至少有一定寬度 */
+        /* 您可以根據圖片或表格的預期大小調整 min-width */
+    }
+
+    /* 圖片佔位符樣式增強 */
+    .layout-img {
+      max-width: 400px;
+      height: auto;
+      min-height: 200px; /* 最小高度確保佔位框可見 */
+      min-width: 300px; /* 最小寬度確保佔位框可見 */
+      border: 2px solid #007ACC;
+      border-radius: 5px;
+      display: flex; /* 使用 flexbox 居中 alt text */
+      align-items: center;
+      justify-content: center;
+      background-color: #f0f8ff; /* 輕微的背景色 */
+      font-size: 1.2em; /* 讓 alt text 更清晰 */
+      color: #666; /* alt text 顏色 */
+      text-align: center;
+      box-sizing: border-box; /* 確保 padding 不增加總寬度 */
+      padding: 10px; /* 內部填充 */
+      margin: 0; /* 移除額外margin，由父容器控制 */
+    }
+
+    /* 抽卡按鈕和重設按鈕的容器 */
+    .card-controls-container {
+        display: flex;
+        flex-direction: column; /* 讓網格和按鈕垂直堆疊 */
+        align-items: center; /* 讓網格和按鈕在自身容器內居中 */
+        flex-shrink: 0;
+        flex-grow: 0;
+        /* max-width: 400px; /* 可以限制此區域的最大寬度 */
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(60px, 1fr)); /* 自動適應列數 */
+      max-width: 400px; /* 限制最大寬度以更好地居中 */
+      grid-gap: 10px;
+      justify-content: center;
+      margin-top: 10px; /* 保持與上方元素的間距 */
+    }
+    .card {
+      background-color: #ffffff;
+      border: 2px solid #007ACC;
+      border-radius: 5px;
+      width: 60px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-weight: bold;
+      color: #005792;
+      transition: 0.3s;
+    }
+    .card:hover {
+      background-color: #d0eaff;
+    }
+    .card.disabled {
+      background-color: #c6d7e2;
+      border-color: #888;
+      color: #666;
+      cursor: not-allowed;
+    }
+    .hidden {
+      display: none;
+    }
+    .card-text {
+      margin-top: 20px;
+      font-size: 18px;
+      text-align: center;
+      color: #003f5c;
+    }
+    .history-section {
+      margin-top: 20px;
+      text-align: center;
+      background-color: #ffffff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      max-width: 500px;
+      margin: 20px auto;
+    }
+    .history-section h2 {
+        color: #003f5c;
+        margin-top: 0;
+        margin-bottom: 15px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 10px;
+    }
+    .history-list {
+      list-style: none;
+      padding: 0;
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      width: 100%;
+      margin: 10px auto;
+      text-align: left;
+    }
+    .history-list li {
+      padding: 8px;
+      border-bottom: 1px dashed #eee;
+      color: #003f5c;
+    }
+    .history-list li:last-child {
+      border-bottom: none;
+    }
+    .popup-animation {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      background-color: rgba(0, 122, 204, 0.9);
+      color: white;
+      padding: 30px;
+      border-radius: 10px;
+      font-size: 24px;
+      font-weight: bold;
+      text-align: center;
+      opacity: 0;
+      transition: all 0.3s ease-out;
+      z-index: 1000;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+    .popup-animation.show {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 1;
+    }
+
+    /* Table specific styles */
+    .seat-table-container {
+        margin: 0 auto; /* 移除額外margin，由父容器控制 */
+        text-align: center;
+        overflow-x: auto; /* For wider tables */
+    }
+    .seat-table {
+        border-collapse: collapse;
+        margin: 0 auto; /* 移除額外margin，由父容器控制 */
+    }
+    .seat-table td {
+        min-width: 60px; /* 確保單元格最小寬度 */
+        height: 60px;
+        border: 1px solid #ccc;
+        text-align: center;
+        vertical-align: middle;
+        position: relative; /* For checkbox positioning */
+    }
+    .seat-table input[type="checkbox"] {
+        position: absolute;
+        top: 5px;
+        left: 5px;
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        z-index: 2; /* 確保勾選框在文字上方 */
+    }
+    .seat-table label {
+        display: block;
+        width: 100%;
+        height: 100%;
+        font-weight: bold;
+        color: #005792;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 1.1em;
+        position: relative; /* For label text positioning */
+        z-index: 1; /* 確保文字在勾選框下方 */
+        padding: 5px; /* 增加內邊距避免文字被勾選框覆蓋 */
+        box-sizing: border-box; /* 確保內邊距不增加總寬度 */
+    }
+    /* 新增：被選中座位的樣式 */
+    .seat-table td.selected-seat {
+        background-color: #aed9ff; /* 淺藍色高亮 */
+        border-color: #005f99;
+    }
+    .seat-table td.disabled-seat {
+        background-color: #c6d7e2;
+        color: #666;
+        cursor: not-allowed;
+    }
+    .view-selection {
+        margin-bottom: 20px;
+    }
+    .view-selection label {
+        margin-right: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>抽座位</h1>
+
+  <div class="input-section" id="setupArea">
+    <h2 style="color:#003f5c">設定抽卡內容</h2>
+    <div>
+      <label for="cardTexts">請輸入每張卡片的內容（每行一筆，至少1筆）</label>
+      <textarea id="cardTexts" placeholder="例如：\n小明\n小華\n陳老師"></textarea>
+    </div>
+
+    <h2 style="color:#003f5c">座位表設定</h2>
+    <div>
+      <label for="rows">行數:</label>
+      <input type="number" id="rows" value="4" min="1">
+      <label for="cols">列數:</label>
+      <input type="number" id="cols" value="4" min="1">
+      <button onclick="generateSeatTable()">生成座位表格</button>
+    </div>
+
+    <div id="seatTableContainer" class="seat-table-container">
+      </div>
+
+    <h2 style="color:#003f5c">請選擇遊戲顯示方式</h2>
+    <div class="view-selection">
+        <label><input type="radio" name="displayMode" value="image" checked> 圖片佈局</label>
+        <label><input type="radio" name="displayMode" value="table"> 座位表格</label>
+    </div>
+
+    <div>
+        <h2 style="color:#003f5c">請上傳座位表圖片 (若選擇圖片佈局)</h2>
+        <input type="file" accept="image/*" onchange="handleImageUpload(event)" /><br>
+    </div>
+    
+    <button onclick="startGame()">開始抽卡</button>
+  </div>
+
+  <div id="gameArea" class="hidden">
+    <div class="main-container">
+      <div id="visualDisplayContainer">
+        <img id="layoutImage" class="layout-img" alt="請上傳座位表圖片">
+        <div id="gameSeatTableContainer" class="seat-table-container hidden">
+          </div>
+      </div>
+      
+      <div class="card-controls-container"> <div class="grid" id="cardGrid"></div>
+        <div class="card-text" id="cardMessage" style="display: none;"></div>
+        <button onclick="resetGame()" style="margin-top: 20px;">重設遊戲</button>
+      </div>
+    </div>
+    <div class="history-section">
+      <h2 style="color:#003f5c">抽卡紀錄</h2>
+      <ul id="drawHistory" class="history-list"></ul>
+      <button onclick="exportToXLSX()" style="margin-top: 15px;">匯出為 XLSX</button>
+    </div>
+  </div>
+
+  <audio id="drawSound" src="https://www.soundjay.com/buttons/beep-07.mp3" preload="auto"></audio>
+  <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+
+  <script>
+    // cardList 會儲存 { seatLabel: string, text: string, assignedAlphaLabel: string } 的物件
+    // 這裡的 text 可能是實際內容或 '空位'
+    let cardList = []; 
+    let drawHistory = [];
+    let seatMap = {}; // 儲存所有可能座位號碼的對象，例如 { 'A1': null, 'A2': null, ... }
+    
+    // 初始化時生成一個預設表格
+    document.addEventListener('DOMContentLoaded', (event) => {
+        generateSeatTable();
+    });
+
+    function handleImageUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        document.getElementById('layoutImage').src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    // getAlphaLabel 函數已不再被抽卡結果直接使用，但如果其他部分需要，可以保留
+    // 將數字索引轉換為 A, B, ..., Z, AA, AB, ... 的英文編號
+    function getAlphaLabel(index) {
+      let label = "";
+      while (index >= 0) {
+        label = String.fromCharCode(65 + (index % 26)) + label;
+        index = Math.floor(index / 26) - 1;
+      }
+      return label;
+    }
+
+    // 生成座位表格
+    function generateSeatTable() {
+        const rows = parseInt(document.getElementById('rows').value);
+        const cols = parseInt(document.getElementById('cols').value);
+        const container = document.getElementById('seatTableContainer');
+        container.innerHTML = '';
+        seatMap = {}; // 清空座位映射，只包含所有可能的座位標籤，不分配內容
+
+        if (isNaN(rows) || isNaN(cols) || rows <= 0 || cols <= 0) {
+            alert("請輸入有效的行數和列數！");
+            return;
+        }
+
+        const table = document.createElement('table');
+        table.className = 'seat-table';
+
+        for (let i = 0; i < rows; i++) {
+            const rowElem = document.createElement('tr');
+            for (let j = 0; j < cols; j++) {
+                const cell = document.createElement('td');
+                const seatLabel = `${String.fromCharCode(65 + i)}${j + 1}`; // 例如 A1, A2, B1, B2...
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `seat_${seatLabel}`;
+                checkbox.value = seatLabel;
+                checkbox.checked = true; // 預設勾選
+                
+                const label = document.createElement('label');
+                label.htmlFor = `seat_${seatLabel}`;
+                label.textContent = seatLabel;
+
+                cell.appendChild(checkbox);
+                cell.appendChild(label);
+                rowElem.appendChild(cell);
+
+                seatMap[seatLabel] = null; // 初始化座位映射，暫時為空
+            }
+            table.appendChild(rowElem);
+        }
+        container.appendChild(table);
+    }
+
+    function startGame() {
+      const inputText = document.getElementById("cardTexts").value.trim();
+      const rawCardTexts = inputText.split(/\n+/).map(str => str.trim()).filter(Boolean);
+
+      if (rawCardTexts.length === 0) {
+        alert("請至少輸入一筆卡片內容");
+        return;
+      }
+
+      // 獲取所有被勾選的座位
+      const checkedCheckboxes = document.querySelectorAll('#seatTableContainer input[type="checkbox"]:checked');
+      // 將勾選的座位標籤存入 currentSelectedSeats 陣列
+      const currentSelectedSeats = Array.from(checkedCheckboxes).map(cb => cb.value);
+
+      if (currentSelectedSeats.length === 0) {
+          alert("請至少勾選一個要抽選的座位！");
+          return;
+      }
+
+      // 檢查卡片內容數量是否多於勾選座位數量
+      if (rawCardTexts.length > currentSelectedSeats.length) {
+          alert(`您輸入了 ${rawCardTexts.length} 筆內容，但只勾選了 ${currentSelectedSeats.length} 個座位。內容數量不能多於勾選的座位數量！`);
+          return; // 阻止遊戲開始
+      }
+      
+      // 1. 建立初始卡片資料，包含原始索引和文本
+      let initialCardData = rawCardTexts.map((text, i) => ({ originalIndex: i, text: text }));
+
+      // 2. 產生一組與卡片內容數量相同、依序的英文編號，然後將其洗牌 (此處為內部使用，不影響顯示)
+      const allAlphaLabelsForContent = Array.from({ length: initialCardData.length }, (_, i) => getAlphaLabel(i));
+      const shuffledAlphaLabels = shuffle(allAlphaLabelsForContent);
+
+      // 3. 將洗牌後的英文編號隨機分配給每張卡片資料 (此處為內部使用，不影響顯示)
+      let cardsWithAssignedLabels = initialCardData.map((data, i) => ({
+          ...data,
+          assignedAlphaLabel: shuffledAlphaLabels[i] // 分配一個隨機且獨特的英文編號
+      }));
+
+      // 4. 洗牌要被分配卡片的選定座位，這樣內容和空位的分配都是隨機的
+      let shuffledSelectedSeats = shuffle([...currentSelectedSeats]); // 複製一份再洗牌
+
+      // 重置 cardList 和 seatMap 以準備新的遊戲
+      cardList = []; 
+      seatMap = {}; 
+
+      // 5. 將洗牌後的卡片內容分配到選定的座位上
+      for (let i = 0; i < shuffledSelectedSeats.length; i++) {
+          const seatLabel = shuffledSelectedSeats[i];
+          let assignedData;
+
+          if (i < cardsWithAssignedLabels.length) {
+              // 分配真實卡片內容
+              assignedData = cardsWithAssignedLabels[i];
+          } else {
+              // 分配空位 (如果勾選的座位多於內容數量)
+              assignedData = { text: '空位', assignedAlphaLabel: '' }; // 空位不分配英文編號
+          }
+          seatMap[seatLabel] = assignedData; // 將卡片內容 (或空位標記) 分配給座位
+          cardList.push({ seatLabel: seatLabel, ...assignedData }); // 建立用於抽卡按鈕的列表
+      }
+
+      // 再次洗牌 cardList，確保抽卡按鈕的順序也是隨機的
+      cardList = shuffle(cardList); 
+
+      drawHistory = []; // 遊戲開始時清空紀錄
+      renderHistory(); // 清空顯示的紀錄
+
+      document.getElementById("setupArea").classList.add("hidden");
+      document.getElementById("gameArea").classList.remove("hidden");
+      document.getElementById("cardMessage").style.display = "none"; // 確保此處不顯示文字
+
+      renderCards(); // 渲染抽卡按鈕 (現在對應的是座位)
+      setupGameDisplayMode(); // 根據選擇設置圖片或表格顯示
+
+      // 複製座位表格到遊戲區，並禁用所有勾選框
+      copyAndSetupGameTable();
+    }
+
+    // 設定遊戲顯示模式（圖片或表格）
+    function setupGameDisplayMode() {
+        const displayMode = document.querySelector('input[name="displayMode"]:checked').value;
+        const layoutImage = document.getElementById('layoutImage');
+        const gameSeatTableContainer = document.getElementById('gameSeatTableContainer');
+        
+        if (displayMode === 'image') {
+            layoutImage.classList.remove('hidden');
+            gameSeatTableContainer.classList.add('hidden');
+        } else { // displayMode === 'table'
+            layoutImage.classList.add('hidden');
+            gameSeatTableContainer.classList.remove('hidden');
+        }
+    }
+
+    // 複製並設置遊戲中的座位表格
+    function copyAndSetupGameTable() {
+        const sourceTableContainer = document.getElementById('seatTableContainer');
+        const gameTableContainer = document.getElementById('gameSeatTableContainer');
+        gameTableContainer.innerHTML = ''; // 清空舊的
+
+        const originalTable = sourceTableContainer.querySelector('.seat-table');
+        if (!originalTable) return; // 如果沒有生成表格則返回
+
+        const clonedTable = originalTable.cloneNode(true);
+        const checkboxes = clonedTable.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(cb => {
+            cb.disabled = true; // 禁用所有勾選框
+            // 移除 checked 狀態，讓後續根據抽卡狀態來更新
+            cb.checked = false;
+            // 移除 highlight class
+            cb.parentNode.classList.remove('selected-seat'); // 確保重置時移除高亮
+        });
+
+        // 根據 seatMap 設置遊戲表格的座位顯示狀態
+        const gameTableCells = clonedTable.querySelectorAll('td');
+        gameTableCells.forEach(cell => {
+            const seatLabel = cell.querySelector('label').textContent;
+            // 如果該座位在 seatMap 中不存在 (表示該座位在設定區沒有被勾選，因此沒有被分配卡片)，則禁用並灰色顯示
+            if (!seatMap[seatLabel]) { 
+                cell.classList.add('disabled-seat');
+                const cb = cell.querySelector('input[type="checkbox"]');
+                if (cb) cb.disabled = true; // 確保 checkbox 也禁用
+            } else {
+                cell.classList.remove('disabled-seat'); // 確保被勾選的座位是正常狀態
+            }
+        });
+
+        gameTableContainer.appendChild(clonedTable);
+    }
+
+    function renderCards() {
+      const grid = document.getElementById("cardGrid");
+      grid.innerHTML = "";
+
+      // 這裡的 cardList 已經包含了分配好的座位、內容和英文編號
+      cardList.forEach((item, shuffledIndex) => { // item 現在是 { seatLabel: 'A1', text: Y, assignedAlphaLabel: Z }
+        const card = document.createElement("div");
+        card.className = "card";
+        card.textContent = shuffledIndex + 1; // 抽卡按鈕上顯示數字 (從1開始)
+        // 點擊時傳遞完整的項目資訊和顯示的數字
+        card.onclick = () => drawCard(card, item, shuffledIndex + 1);
+        grid.appendChild(card);
+      });
+    }
+
+    // 抽卡函數，現在接收完整的項目物件
+    function drawCard(cardElement, item, displayedNumber) {
+      if (cardElement.classList.contains("disabled")) return;
+
+      // 播放音效
+      const sound = document.getElementById('drawSound');
+      sound.currentTime = 0; // 重置到開頭
+      sound.play().catch(e => console.error("Error playing sound:", e));
+
+      // 將抽卡按鈕標記為已禁用
+      cardElement.classList.add("disabled");
+
+      const text = item.text;
+      const seatLabel = item.seatLabel; // 獲取對應的座位標籤
+
+      // 更新遊戲中的座位表格顯示 - 高亮顯示座位
+      // 透過 document.querySelector 找到遊戲區中對應座位的 td 元素
+      const gameSeatCell = document.querySelector(`#gameSeatTableContainer td label[for="seat_${seatLabel}"]`).parentNode;
+      if (gameSeatCell) {
+          gameSeatCell.classList.add('selected-seat'); // 增加高亮樣式
+          // 也可以勾選內部的 checkbox，但因為 disabled 了，主要靠樣式
+          const gameSeatCheckbox = gameSeatCell.querySelector('input[type="checkbox"]');
+          if(gameSeatCheckbox) gameSeatCheckbox.checked = true;
+      }
+
+      // 顯示彈出動畫
+      const popup = document.createElement("div");
+      popup.className = "popup-animation";
+      
+      // 動畫中只顯示座位號碼和內容，移除英文編號
+      if (text === '空位') {
+          popup.textContent = `抽到空位 ${seatLabel}`;
+      } else {
+          popup.textContent = `抽到座位 ${seatLabel}: ${text}`;
+      }
+      document.body.appendChild(popup);
+
+      // 觸發動畫
+      setTimeout(() => {
+        popup.classList.add("show");
+      }, 10); // 短暫延遲以確保動畫觸發
+
+      // 動畫停留3秒後消失
+      setTimeout(() => {
+        popup.classList.remove("show");
+        // 等待過渡動畫結束後再移除元素，避免閃爍
+        popup.addEventListener('transitionend', () => popup.remove(), { once: true });
+      }, 3000); // 顯示 3 秒
+
+      // 添加到抽卡紀錄 (仍保留 alphabeticLabel 在後台數據中，以便需要時回溯或擴展，但匯出時不包含)
+      drawHistory.push({ displayedNumber: displayedNumber, seatLabel: seatLabel, alphabeticLabel: item.assignedAlphaLabel, text: text, timestamp: new Date().toLocaleString() });
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const historyList = document.getElementById("drawHistory");
+      historyList.innerHTML = "";
+      drawHistory.forEach(item => {
+        const listItem = document.createElement("li");
+        // 紀錄中顯示時間、座位號碼和內容，移除英文編號
+        let historyText = `${item.timestamp} - 抽到座位 ${item.seatLabel}`;
+        if (item.text !== '空位') {
+            historyText += `: ${item.text}`;
+        } else {
+            historyText += ` (空位)`; // 對空位也加上標註
+        }
+        listItem.textContent = historyText;
+        historyList.appendChild(listItem);
+      });
+      historyList.scrollTop = historyList.scrollHeight; // 滾動到底部
+    }
+
+    // 匯出為 XLSX 函數
+    function exportToXLSX() {
+        if (drawHistory.length === 0) {
+            alert("沒有抽卡紀錄可以匯出！");
+            return;
+        }
+
+        // 準備數據，包含表頭
+        // 移除 "分配標籤 (英文)" 這一列
+        const wsData = [
+            ["時間", "抽卡順序 (數字)", "座位號碼", "卡片內容"] 
+        ];
+
+        drawHistory.forEach(item => {
+            wsData.push([
+                item.timestamp,
+                item.displayedNumber,
+                item.seatLabel,
+                item.text // 直接使用 text
+            ]);
+        });
+
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "抽卡紀錄");
+
+        // 生成 XLSX 檔案並下載
+        XLSX.writeFile(wb, "抽座位紀錄.xlsx");
+    }
+
+    function resetGame() {
+      // 清空遊戲區
+      document.getElementById("cardGrid").innerHTML = "";
+      document.getElementById("gameSeatTableContainer").innerHTML = ""; // 清空遊戲中的座位表格
+
+      // 清空紀錄
+      drawHistory = [];
+      renderHistory();
+
+      // 重置圖片 (可選，根據需求決定是否保留圖片)
+      document.getElementById('layoutImage').src = ""; // 清空圖片源
+
+      // 顯示設定區，隱藏遊戲區
+      document.getElementById("setupArea").classList.remove("hidden");
+      document.getElementById("gameArea").classList.add("hidden");
+
+      // 確保卡片文字顯示元素隱藏
+      document.getElementById("cardMessage").style.display = "none";
+
+      // 清空卡片列表和座位映射
+      cardList = [];
+      seatMap = {};
+      
+      // 重新生成設定區的座位表格並預設勾選
+      generateSeatTable();
+      // 確保顯示圖片佈局選項被勾選
+      document.querySelector('input[name="displayMode"][value="image"]').checked = true;
+      // 清空文本區內容
+      document.getElementById("cardTexts").value = "";
+    }
+  </script>
+</body>
+</html>
